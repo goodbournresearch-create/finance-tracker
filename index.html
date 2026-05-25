@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goodbourn Finance Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+  
+  .header { background: #1a1a2e; color: white; padding: 20px 32px; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+
+  .container { max-width: 900px; margin: 32px auto; padding: 0 24px; }
+
+  .card { background: white; border-radius: 10px; padding: 28px; margin-bottom: 20px; border: 1px solid #e8e8e8; }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: #1a1a2e; }
+
+  .auth-section { text-align: center; padding: 40px; }
+  .auth-section p { color: #666; margin-bottom: 24px; font-size: 14px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: #1a1a2e; color: white; }
+  .btn-primary:hover { background: #2d2d4e; }
+  .btn-google { background: white; color: #333; border: 1px solid #ddd; }
+  .btn-google:hover { background: #f8f8f8; }
+  .btn-success { background: #16a34a; color: white; }
+  .btn-success:hover { background: #15803d; }
+  .btn-danger { background: #dc2626; color: white; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-left: auto; }
+  .status-pill.connected { background: #dcfce7; color: #16a34a; }
+  .status-pill.disconnected { background: #fee2e2; color: #dc2626; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid #e8e8e8; }
+  .tab { padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: none; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+  .tab.active { color: #1a1a2e; border-bottom-color: #1a1a2e; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 12px; font-weight: 500; color: #444; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-group select, .form-group input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; color: #1a1a1a; background: white; }
+
+  textarea { width: 100%; min-height: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; font-family: 'Courier New', monospace; resize: vertical; line-height: 1.5; }
+
+  .hint { font-size: 12px; color: #888; margin-top: 6px; }
+
+  .parsed-preview { background: #f8f9fa; border-radius: 6px; padding: 16px; margin-top: 16px; border: 1px solid #e8e8e8; }
+  .parsed-preview h3 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #444; }
+  .category-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+  .category-row:last-child { border-bottom: none; }
+  .amount-income { color: #16a34a; font-weight: 600; font-family: monospace; }
+  .amount-expense { color: #dc2626; font-weight: 600; font-family: monospace; }
+
+  .action-row { display: flex; gap: 12px; align-items: center; margin-top: 20px; flex-wrap: wrap; }
+
+  .log { background: #1a1a2e; color: #a0f0a0; border-radius: 6px; padding: 16px; font-family: 'Courier New', monospace; font-size: 12px; min-height: 80px; max-height: 200px; overflow-y: auto; margin-top: 16px; }
+  .log .entry.error { color: #f87171; }
+  .log .entry.success { color: #86efac; }
+  .log .entry.info { color: #93c5fd; }
+
+  .net-worth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .nw-field { display: flex; flex-direction: column; gap: 4px; }
+  .nw-field label { font-size: 11px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+  .nw-field input { padding: 8px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; }
+
+  .section-divider { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888; margin: 20px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hidden { display: none !important; }
+  .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #1d4ed8; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+  <h1>Goodbourn Family Finance Tracker</h1>
+  <div id="authStatus" class="status-pill disconnected"><span class="dot"></span> Not connected</div>
+</div>
+
+<div class="container">
+
+  <div class="card" id="authCard">
+    <h2>Connect to Google Sheets</h2>
+    <div class="auth-section">
+      <p>Sign in with your Google account to allow this tool to write directly into your finance spreadsheet.</p>
+      <button class="btn btn-google" onclick="startAuth()">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Sign in with Google
+      </button>
+    </div>
+  </div>
+
+  <div id="mainContent" class="hidden">
+
+    <div class="tab-bar">
+      <button class="tab active" onclick="showTab('cashflow', this)">UAE Cashflow</button>
+      <button class="tab" onclick="showTab('uk', this)">UK Cashflow</button>
+      <button class="tab" onclick="showTab('networth', this)">Net Worth</button>
+      <button class="tab" onclick="showTab('fx', this)">FX Rate</button>
+    </div>
+
+    <!-- UAE CASHFLOW -->
+    <div id="tab-cashflow">
+      <div class="card">
+        <h2>Parse UAE Bank Statement</h2>
+        <div class="info-box">Paste your ENBD statement. Claude will categorise and map to your UAE Cashflow tab.</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Month</label>
+            <select id="uaeMonth"><option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option><option>May</option><option>Jun</option><option>Jul</option><option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option></select>
+          </div>
+          <div class="form-group">
+            <label>Account</label>
+            <select id="uaeAccount"><option value="joint">ENBD Joint Debit</option><option value="cc">ENBD Credit Card</option><option value="saverChris">ENBD Saver — Chris</option><option value="saverGemma">ENBD Saver — Gemma</option></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Statement Data</label>
+          <textarea id="statementInput" placeholder="Date, Description, Amount&#10;01/05/2026, GEMS EDUCATION SALARY, 35000&#10;03/05/2026, CARREFOUR MIRDIF, -842&#10;05/05/2026, DEWA, -1200"></textarea>
+          <p class="hint">Paste any format. Positive = credit, negative = debit.</p>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-primary" id="parseUAEBtn" onclick="parseStatement()">Parse & Categorise</button>
+        </div>
+        <div id="parsedPreview" class="hidden parsed-preview">
+          <h3>Categorised totals — review before writing</h3>
+          <div id="parsedRows"></div>
+          <div class="action-row">
+            <button class="btn btn-success" onclick="writeToSheet('uae')">Write to Google Sheet</button>
+          </div>
+        </div>
+        <div id="uaeLog" class="log hidden"></div>
+      </div>
+    </div>
+
+    <!-- UK CASHFLOW -->
+    <div id="tab-uk" class="hidden">
+      <div class="card">
+        <h2>Parse UK Bank Statement</h2>
+        <div class="info-box">Paste your HSBC statement. Maps to the UK Cashflow tab in GBP.</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Month</label>
+            <select id="ukMonth"><option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option><option>May</option><option>Jun</option><option>Jul</option><option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Statement Data</label>
+          <textarea id="ukStatementInput" placeholder="Date, Description, Amount&#10;01/05/2026, RENTAL INCOME, 1800&#10;02/05/2026, MORTGAGE, -950"></textarea>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-primary" onclick="parseUKStatement()">Parse & Categorise</button>
+        </div>
+        <div id="ukParsedPreview" class="hidden parsed-preview">
+          <h3>Categorised totals — review before writing</h3>
+          <div id="ukParsedRows"></div>
+          <div class="action-row">
+            <button class="btn btn-success" onclick="writeToSheet('uk')">Write to Google Sheet</button>
+          </div>
+        </div>
+        <div id="ukLog" class="log hidden"></div>
+      </div>
+    </div>
+
+    <!-- NET WORTH -->
+    <div id="tab-networth" class="hidden">
+      <div class="card">
+        <h2>Net Worth Snapshot</h2>
+        <div class="info-box">Enter end-of-month balances. Writes to the Net Worth tab.</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Month</label>
+            <select id="nwMonth"><option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option><option>May</option><option>Jun</option><option>Jul</option><option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option></select>
+          </div>
+        </div>
+        <div class="section-divider">Cash (AED)</div>
+        <div class="net-worth-grid">
+          <div class="nw-field"><label>ENBD Joint Debit</label><input type="number" id="nw_enbd_joint" placeholder="0"></div>
+          <div class="nw-field"><label>ENBD Credit Card (balance owed)</label><input type="number" id="nw_enbd_cc" placeholder="0"></div>
+          <div class="nw-field"><label>ENBD Saver — Chris</label><input type="number" id="nw_saver_chris" placeholder="0"></div>
+          <div class="nw-field"><label>ENBD Saver — Gemma</label><input type="number" id="nw_saver_gemma" placeholder="0"></div>
+        </div>
+        <div class="section-divider">Cash (GBP)</div>
+        <div class="net-worth-grid">
+          <div class="nw-field"><label>HSBC Joint Debit</label><input type="number" id="nw_hsbc" placeholder="0"></div>
+        </div>
+        <div class="section-divider">Investments (AED)</div>
+        <div class="net-worth-grid">
+          <div class="nw-field"><label>UAE Apartment — Market Value</label><input type="number" id="nw_uae_value" placeholder="0"></div>
+          <div class="nw-field"><label>UAE Apartment — Mortgage Owed</label><input type="number" id="nw_uae_mortgage" placeholder="0"></div>
+        </div>
+        <div class="section-divider">Investments (GBP)</div>
+        <div class="net-worth-grid">
+          <div class="nw-field"><label>UK Property — Market Value</label><input type="number" id="nw_uk_value" placeholder="0"></div>
+          <div class="nw-field"><label>UK Property — Mortgage Owed</label><input type="number" id="nw_uk_mortgage" placeholder="0"></div>
+          <div class="nw-field"><label>RL360 Lump Sum</label><input type="number" id="nw_rl360_lump" placeholder="0"></div>
+          <div class="nw-field"><label>RL360 Monthly Saver</label><input type="number" id="nw_rl360_monthly" placeholder="0"></div>
+        </div>
+        <div class="action-row" style="margin-top:20px">
+          <button class="btn btn-success" onclick="writeNetWorth()">Write to Google Sheet</button>
+        </div>
+        <div id="nwLog" class="log hidden"></div>
+      </div>
+    </div>
+
+    <!-- FX -->
+    <div id="tab-fx" class="hidden">
+      <div class="card">
+        <h2>FX Rate Update</h2>
+        <div class="info-box">Update before each monthly net worth snapshot. Check xe.com for the current rate.</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Month</label>
+            <select id="fxMonth"><option>Jan 2026</option><option>Feb 2026</option><option>Mar 2026</option><option>Apr 2026</option><option>May 2026</option><option>Jun 2026</option><option>Jul 2026</option><option>Aug 2026</option><option>Sep 2026</option><option>Oct 2026</option><option>Nov 2026</option><option>Dec 2026</option></select>
+          </div>
+          <div class="form-group">
+            <label>1 GBP = (AED)</label>
+            <input type="number" id="fxRate" placeholder="4.8500" step="0.0001">
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-success" onclick="writeFXRate()">Write to Google Sheet</button>
+        </div>
+        <div id="fxLog" class="log hidden"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const CLIENT_ID = '841469492659-omim9tes3eb2du9mj01rtqfmtb6fu7h0.apps.googleusercontent.com';
+const SHEET_ID = '1IEveubCBKbWVv-2Baisr-3vqRz-GiAM9bLT4Uo9YMso';
+const REDIRECT_URI = 'https://goodbournresearch-create.github.io/finance-tracker';
+const SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+
+let accessToken = null;
+let parsedUAEData = null;
+let parsedUKData = null;
+
+const monthCols = { Jan:'C', Feb:'D', Mar:'E', Apr:'F', May:'G', Jun:'H', Jul:'I', Aug:'J', Sep:'K', Oct:'L', Nov:'M', Dec:'N' };
+
+const uaeRows = {
+  salary_chris:7, salary_gemma:8, other_income:9,
+  mortgage:13, utilities:14, childcare:15, groceries:16, dining:17,
+  transport:18, travel:19, health:20, insurance:21, subscriptions:22,
+  kids_other:23, personal:24, gifts:25, household:26, cc_payment:27,
+  bank_fees:28, other:29, saver_chris:32, saver_gemma:33,
+  rl360_monthly:34, rl360_lump:35
+};
+
+const ukRows = {
+  rental_income:7, other_income:8, mortgage:11, lettings:12,
+  maintenance:13, insurance:14, service_charge:15, ground_rent:16,
+  tax:17, other_bills:18, bank_fees:19, other:20, savings:23
+};
+
+const nwRows = {
+  enbd_joint:5, enbd_cc:6, saver_chris:7, saver_gemma:8, hsbc:9,
+  uae_value:12, uae_mortgage:13, uk_value:14, uk_mortgage:15,
+  rl360_lump:16, rl360_monthly:17
+};
+
+// Handle token on page load (after redirect back from Google)
+window.onload = function() {
+  const hash = window.location.hash;
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    accessToken = params.get('access_token');
+    if (accessToken) {
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setConnected(true);
+    }
+  }
+};
+
+function startAuth() {
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${encodeURIComponent(SCOPE)}&prompt=consent`;
+  window.location.href = authUrl;
+}
+
+function setConnected(yes) {
+  const pill = document.getElementById('authStatus');
+  const authCard = document.getElementById('authCard');
+  const main = document.getElementById('mainContent');
+  if (yes) {
+    pill.className = 'status-pill connected';
+    pill.innerHTML = '<span class="dot"></span> Connected';
+    authCard.classList.add('hidden');
+    main.classList.remove('hidden');
+  }
+}
+
+function showTab(name, el) {
+  ['cashflow','uk','networth','fx'].forEach(t => document.getElementById('tab-'+t).classList.add('hidden'));
+  document.getElementById('tab-'+name).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+async function callClaude(prompt) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  const data = await res.json();
+  const text = data.content[0].text.trim().replace(/```json|```/g, '');
+  return JSON.parse(text);
+}
+
+async function parseStatement() {
+  const raw = document.getElementById('statementInput').value.trim();
+  if (!raw) { alert('Paste your statement data first.'); return; }
+  const month = document.getElementById('uaeMonth').value;
+  const account = document.getElementById('uaeAccount').value;
+  const btn = document.getElementById('parseUAEBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Parsing...';
+
+  try {
+    parsedUAEData = await callClaude(`Parse this UAE bank statement for the Goodbourn family. Account: ${account}, Month: ${month}.
+
+Categorise all transactions into these keys and sum amounts in AED:
+salary_chris, salary_gemma, other_income, mortgage, utilities, childcare, groceries, dining, transport, travel, health, insurance, subscriptions, kids_other, personal, gifts, household, cc_payment, bank_fees, saver_chris, saver_gemma, rl360_monthly, rl360_lump, other
+
+Income values POSITIVE. Expense values POSITIVE (absolute amounts). Only include non-zero keys.
+Respond ONLY with a JSON object, no markdown.
+
+${raw}`);
+    showParsedPreview('uae', parsedUAEData, month);
+  } catch(e) { alert('Parse error: ' + e.message); }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Parse & Categorise';
+}
+
+async function parseUKStatement() {
+  const raw = document.getElementById('ukStatementInput').value.trim();
+  if (!raw) { alert('Paste your statement data first.'); return; }
+  const month = document.getElementById('ukMonth').value;
+
+  try {
+    parsedUKData = await callClaude(`Parse this HSBC UK bank statement for the Goodbourn family. Month: ${month}. Currency: GBP.
+
+Categorise into: rental_income, other_income, mortgage, lettings, maintenance, insurance, service_charge, ground_rent, tax, other_bills, bank_fees, savings, other
+
+Income POSITIVE, expenses POSITIVE. Only non-zero keys. Respond ONLY with JSON, no markdown.
+
+${raw}`);
+    showParsedPreview('uk', parsedUKData, month);
+  } catch(e) { alert('Parse error: ' + e.message); }
+}
+
+const labels = {
+  salary_chris:'Salary — Chris (GEMS)', salary_gemma:'Salary — Gemma (VI)',
+  other_income:'Other income', rental_income:'UK rental income',
+  mortgage:'Mortgage', utilities:'Utilities', childcare:'Childcare/nursery',
+  groceries:'Groceries', dining:'Dining out', transport:'Transport/fuel',
+  travel:'Travel', health:'Health/medical', insurance:'Insurance',
+  subscriptions:'Subscriptions', kids_other:'Kids — other', personal:'Personal/clothing',
+  gifts:'Gifts/donations', household:'Household/maintenance', cc_payment:'CC payment',
+  bank_fees:'Bank fees', saver_chris:'Transfer → Saver Chris',
+  saver_gemma:'Transfer → Saver Gemma', rl360_monthly:'RL360 monthly',
+  rl360_lump:'RL360 lump top-up', savings:'UK savings transfer',
+  lettings:'Lettings fees', maintenance:'Maintenance', service_charge:'Service charge',
+  ground_rent:'Ground rent', tax:'Rental tax', other_bills:'Other bills', other:'Other/uncategorised'
+};
+
+function showParsedPreview(type, data, month) {
+  const incomeKeys = type === 'uae' ? ['salary_chris','salary_gemma','other_income'] : ['rental_income','other_income'];
+  const currency = type === 'uae' ? 'AED' : 'GBP';
+  let html = '';
+  let totalIn = 0, totalOut = 0;
+
+  for (const [key, val] of Object.entries(data)) {
+    if (!val) continue;
+    const isIncome = incomeKeys.includes(key);
+    if (isIncome) totalIn += val; else totalOut += val;
+    html += `<div class="category-row">
+      <span>${labels[key] || key}</span>
+      <span class="${isIncome ? 'amount-income' : 'amount-expense'}">${isIncome ? '+' : '-'}${currency} ${Number(val).toLocaleString()}</span>
+    </div>`;
+  }
+  html += `<div class="category-row" style="font-weight:600;margin-top:8px">
+    <span>Net cashflow</span>
+    <span class="${totalIn-totalOut >= 0 ? 'amount-income':'amount-expense'}">${currency} ${(totalIn-totalOut).toLocaleString()}</span>
+  </div>`;
+
+  if (type === 'uae') {
+    document.getElementById('parsedRows').innerHTML = html;
+    document.getElementById('parsedPreview').classList.remove('hidden');
+  } else {
+    document.getElementById('ukParsedRows').innerHTML = html;
+    document.getElementById('ukParsedPreview').classList.remove('hidden');
+  }
+}
+
+async function writeToSheet(type) {
+  if (!accessToken) { alert('Not connected.'); return; }
+  const data = type === 'uae' ? parsedUAEData : parsedUKData;
+  const month = document.getElementById(type === 'uae' ? 'uaeMonth' : 'ukMonth').value;
+  const col = monthCols[month];
+  const sheetName = type === 'uae' ? 'UAE Cashflow' : 'UK Cashflow';
+  const rows = type === 'uae' ? uaeRows : ukRows;
+  const log = document.getElementById(type === 'uae' ? 'uaeLog' : 'ukLog');
+  log.classList.remove('hidden');
+  addLog(log, `Writing ${month} to ${sheetName}...`, 'info');
+
+  const valueData = Object.entries(data)
+    .filter(([k, v]) => v && rows[k])
+    .map(([k, v]) => ({ range: `${sheetName}!${col}${rows[k]}`, values: [[v]] }));
+
+  await batchUpdate(valueData, log);
+}
+
+async function writeNetWorth() {
+  if (!accessToken) { alert('Not connected.'); return; }
+  const month = document.getElementById('nwMonth').value;
+  const col = monthCols[month];
+  const log = document.getElementById('nwLog');
+  log.classList.remove('hidden');
+  addLog(log, `Writing ${month} net worth...`, 'info');
+
+  const fields = {
+    enbd_joint:'nw_enbd_joint', enbd_cc:'nw_enbd_cc', saver_chris:'nw_saver_chris',
+    saver_gemma:'nw_saver_gemma', hsbc:'nw_hsbc', uae_value:'nw_uae_value',
+    uae_mortgage:'nw_uae_mortgage', uk_value:'nw_uk_value', uk_mortgage:'nw_uk_mortgage',
+    rl360_lump:'nw_rl360_lump', rl360_monthly:'nw_rl360_monthly'
+  };
+
+  const valueData = Object.entries(fields)
+    .map(([k, id]) => ({ key: k, val: parseFloat(document.getElementById(id).value) || 0 }))
+    .filter(({key, val}) => val && nwRows[key])
+    .map(({key, val}) => ({ range: `Net Worth!${col}${nwRows[key]}`, values: [[val]] }));
+
+  await batchUpdate(valueData, log);
+}
+
+async function writeFXRate() {
+  if (!accessToken) { alert('Not connected.'); return; }
+  const rate = parseFloat(document.getElementById('fxRate').value);
+  if (!rate) { alert('Enter the rate.'); return; }
+  const month = document.getElementById('fxMonth').value;
+  const log = document.getElementById('fxLog');
+  log.classList.remove('hidden');
+
+  const fxMonths = ['Jan 2026','Feb 2026','Mar 2026','Apr 2026','May 2026','Jun 2026','Jul 2026','Aug 2026','Sep 2026','Oct 2026','Nov 2026','Dec 2026'];
+  const fxRow = 7 + fxMonths.indexOf(month);
+  const inv = (1/rate).toFixed(6);
+
+  await batchUpdate([
+    { range: `FX!B${fxRow}`, values: [[rate]] },
+    { range: `FX!C${fxRow}`, values: [[inv]] },
+    { range: `FX!B4`, values: [[rate]] },
+    { range: `FX!B5`, values: [[inv]] }
+  ], log);
+}
+
+async function batchUpdate(valueData, log) {
+  try {
+    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values:batchUpdate`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valueInputOption: 'RAW', data: valueData })
+    });
+    const result = await res.json();
+    if (result.totalUpdatedCells) {
+      addLog(log, `✓ ${result.totalUpdatedCells} cells updated.`, 'success');
+    } else {
+      addLog(log, 'Error: ' + JSON.stringify(result.error), 'error');
+    }
+  } catch(e) {
+    addLog(log, 'Error: ' + e.message, 'error');
+  }
+}
+
+function addLog(el, msg, type='info') {
+  const div = document.createElement('div');
+  div.className = 'entry ' + type;
+  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+</script>
+</body>
+</html>
